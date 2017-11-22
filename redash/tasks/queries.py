@@ -463,22 +463,32 @@ class QueryExecutor(object):
             if self.scheduled_query:
                 self.scheduled_query.schedule_failures += 1
                 models.db.session.add(self.scheduled_query)
-        else:
-            if (self.scheduled_query and
-                    self.scheduled_query.schedule_failures > 0):
+
+            models.db.session.commit()
+            return result
+        try:
+            if self.scheduled_query and self.scheduled_query.schedule_failures > 0:
                 self.scheduled_query.schedule_failures = 0
                 models.db.session.add(self.scheduled_query)
+
             query_result, updated_query_ids = models.QueryResult.store_result(
                 self.data_source.org, self.data_source,
                 self.query_hash, self.query, data,
                 run_time, utils.utcnow())
+        except Exception as e:
+            result = unicode(e)
+            logging.error(u"*SAFO*: Error saving results to the DB. query_hash=%s, error: %s", self.query_hash, e)
+            self.tracker.update(state='failed')
+        else:
+            result = query_result.id
             self._log_progress('checking_alerts')
             for query_id in updated_query_ids:
                 check_alerts_for_query.delay(query_id)
             self._log_progress('finished')
 
-            result = query_result.id
-        models.db.session.commit()
+        finally:
+            models.db.session.commit()
+
         return result
 
     def _annotate_query(self, query_runner):

@@ -1,5 +1,5 @@
 import { find } from 'underscore';
-import logoUrl from '@/assets/images/redash_icon_small.png';
+import logoUrl from '@/assets/images/tapingo_favicon_128.png';
 import template from './visualization-embed.html';
 
 const VisualizationEmbed = {

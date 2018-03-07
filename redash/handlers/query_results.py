@@ -12,6 +12,7 @@ from redash.permissions import require_permission, not_view_only, has_access, re
 from redash.handlers.base import BaseResource, get_object_or_404
 from redash.utils import collect_query_parameters, collect_parameters_from_request, gen_query_hash
 from redash.tasks.queries import enqueue_query
+import newrelic.agent
 
 
 def error_response(message):
@@ -24,6 +25,7 @@ def error_response(message):
 #             removed once we refactor the query results API endpoints and handling
 #             on the client side. Please don't reuse in other API handlers.
 #
+@newrelic.agent.function_trace()
 def run_query_sync(data_source, parameter_values, query_text, max_age=0):
     query_parameters = set(collect_query_parameters(query_text))
     missing_params = set(query_parameters) - set(parameter_values.keys())
@@ -194,7 +196,7 @@ class QueryResultResource(BaseResource):
                     query_result = run_query_sync(query.data_source, parameter_values, query.to_dict()['query'], max_age=max_age)
                 elif query.latest_query_data_id is not None:
                     query_result = get_object_or_404(models.QueryResult.get_by_id_and_org, query.latest_query_data_id, self.current_org)
-                
+
             if query is not None and query_result is not None and self.current_user.is_api_user():
                 if query.query_hash != query_result.query_hash:
                     abort(404, message='No cached result found for this query.')

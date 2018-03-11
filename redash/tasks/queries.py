@@ -14,6 +14,7 @@ from redash.query_runner import InterruptException
 from redash.utils import gen_query_hash
 from redash.worker import celery
 from redash.tasks.alerts import check_alerts_for_query
+import newrelic.agent
 
 logger = get_task_logger(__name__)
 
@@ -511,6 +512,7 @@ class QueryExecutor(object):
 
 # user_id is added last as a keyword argument for backward compatability -- to support executing previously submitted
 # jobs before the upgrade to this version.
+@newrelic.agent.function_trace()
 @celery.task(name="redash.tasks.execute_query", bind=True, track_started=True)
 def execute_query(self, query, data_source_id, metadata, user_id=None,
                   scheduled_query_id=None):
